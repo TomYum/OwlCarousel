@@ -28,6 +28,11 @@ if (typeof Object.create !== "function") {
             base.$elem = $(el);
             base.options = $.extend({}, $.fn.owlCarousel.options, base.$elem.data(), options);
 
+
+            if ( base.options.isVertical ){
+                base.$elem.addClass('owl-carousel-vertical');
+            }
+
             base.userOptions = options;
             base.loadContent();
         },
@@ -135,7 +140,7 @@ if (typeof Object.create !== "function") {
             if (base.options.lazyLoad === true) {
                 base.lazyLoad();
             }
-            if (base.options.autoHeight === true) {
+            if (base.options.autoHeight === true && !base.options.isVertical) {
                 base.autoHeight();
             }
             base.onVisibleItems();
@@ -311,8 +316,16 @@ if (typeof Object.create !== "function") {
             base.$owlItems.each(function (index) {
                 var $this = $(this);
                 $this
-                    .css({"width": base.itemWidth})
                     .data("owl-item", Number(index));
+
+
+                if ( base.options.isVertical ) {
+                    $this.css({"height": base.itemHeight})
+                }
+                else{
+                    $this.css({"width": base.itemWidth})
+                }
+
 
                 if (index % base.options.items === 0 || index === lastItem) {
                     if (!(index > lastItem)) {
@@ -325,12 +338,23 @@ if (typeof Object.create !== "function") {
 
         appendWrapperSizes : function () {
             var base = this,
-                width = base.$owlItems.length * base.itemWidth;
+                width = base.$owlItems.length * base.itemWidth,
+                height = base.$owlItems.length * base.itemHeight;
 
-            base.$owlWrapper.css({
-                "width": width * 2,
-                "left": 0
-            });
+            if ( this.options.isVertical ){
+                base.$owlWrapper.css({
+                    "height": height * 2,
+                    "top": 0
+                });
+            }
+            else{
+                base.$owlWrapper.css({
+                    "width": width * 2,
+                    "left": 0
+                });
+            }
+
+
             base.appendItemsSizes();
         },
 
@@ -344,12 +368,21 @@ if (typeof Object.create !== "function") {
 
         calculateWidth : function () {
             var base = this;
-            base.itemWidth = Math.round(base.$elem.width() / base.options.items);
+            if ( !base.options.isVertical ) {
+                base.itemWidth = Math.round(base.$elem.width() / base.options.items);
+            }else{
+                base.itemHeight = Math.round(base.$elem.height() / base.options.items);
+
+            }
         },
 
         max : function () {
-            var base = this,
+            var base = this,maximum;
+            if ( !base.options.isVertical ) {
                 maximum = ((base.itemsAmount * base.itemWidth) - base.options.items * base.itemWidth) * -1;
+            }else{
+                maximum = ((base.itemsAmount * base.itemHeight) - base.options.items * base.itemHeight) * -1;
+            }
             if (base.options.items > base.itemsAmount) {
                 base.maximumItem = 0;
                 maximum = 0;
@@ -369,6 +402,7 @@ if (typeof Object.create !== "function") {
             var base = this,
                 prev = 0,
                 elWidth = 0,
+                elHeight = 0,
                 i,
                 item,
                 roundPageNum;
@@ -378,7 +412,13 @@ if (typeof Object.create !== "function") {
 
             for (i = 0; i < base.itemsAmount; i += 1) {
                 elWidth += base.itemWidth;
-                base.positionsInArray.push(-elWidth);
+                elHeight += base.itemHeight;
+                if ( base.options.isVertical )
+                {
+                    base.positionsInArray.push(-elHeight);
+                }else {
+                    base.positionsInArray.push(-elWidth);
+                }
 
                 if (base.options.scrollPerPage === true) {
                     item = $(base.$owlItems[i]);
@@ -754,13 +794,27 @@ if (typeof Object.create !== "function") {
         },
 
         doTranslate : function (pixels) {
-            return {
-                "-webkit-transform": "translate3d(" + pixels + "px, 0px, 0px)",
-                "-moz-transform": "translate3d(" + pixels + "px, 0px, 0px)",
-                "-o-transform": "translate3d(" + pixels + "px, 0px, 0px)",
-                "-ms-transform": "translate3d(" + pixels + "px, 0px, 0px)",
-                "transform": "translate3d(" + pixels + "px, 0px,0px)"
-            };
+
+            if (this.options.isVertical) {
+
+                return {
+                    "-webkit-transform": "translate3d( 0px," + pixels + "px, 0px)",
+                    "-moz-transform": "translate3d( 0px," + pixels + "px, 0px)",
+                    "-o-transform": "translate3d( 0px," + pixels + "px,  0px)",
+                    "-ms-transform": "translate3d( 0px," + pixels + "px, 0px)",
+                    "transform": "translate3d( 0px," + pixels + "px,0px)"
+                };
+
+            }else{
+                return {
+                    "-webkit-transform": "translate3d(" + pixels + "px, 0px, 0px)",
+                    "-moz-transform": "translate3d(" + pixels + "px, 0px, 0px)",
+                    "-o-transform": "translate3d(" + pixels + "px, 0px, 0px)",
+                    "-ms-transform": "translate3d(" + pixels + "px, 0px, 0px)",
+                    "transform": "translate3d(" + pixels + "px, 0px,0px)"
+                };
+            }
+
         },
 
         transition3d : function (value) {
@@ -770,16 +824,19 @@ if (typeof Object.create !== "function") {
 
         css2move : function (value) {
             var base = this;
-            base.$owlWrapper.css({"left" : value});
+            if ( this.options.isVertical ){
+                base.$owlWrapper.css({"top" : value});
+            } else {
+                base.$owlWrapper.css({"left" : value});
+            }
         },
 
         css2slide : function (value, speed) {
-            var base = this;
+            var base = this,
+                position = ( this.options.isVertical) ? { "top" : value } : { "left" : value };
 
             base.isCssFinish = false;
-            base.$owlWrapper.stop(true, true).animate({
-                "left" : value
-            }, {
+            base.$owlWrapper.stop(true, true).animate( position, {
                 duration : speed || base.options.slideSpeed,
                 complete : function () {
                     base.isCssFinish = true;
@@ -940,10 +997,14 @@ if (typeof Object.create !== "function") {
                 base.newPosX = 0;
                 base.newRelativeX = 0;
 
+                base.newPosY = 0;
+                base.newRelativeY = 0;
+
                 $(this).css(base.removeTransition());
 
                 position = $(this).position();
-                locals.relativePos = position.left;
+                locals.relativePosX = position.left;
+                locals.relativePosY = position.top;
 
                 locals.offsetX = getTouches(ev).x - position.left;
                 locals.offsetY = getTouches(ev).y - position.top;
@@ -961,40 +1022,80 @@ if (typeof Object.create !== "function") {
 
                 base.newPosX = getTouches(ev).x - locals.offsetX;
                 base.newPosY = getTouches(ev).y - locals.offsetY;
-                base.newRelativeX = base.newPosX - locals.relativePos;
+                base.newRelativeX = base.newPosX - locals.relativePosX;
+                base.newRelativeY = base.newPosY - locals.relativePosY;
 
-                if (typeof base.options.startDragging === "function" && locals.dragging !== true && base.newRelativeX !== 0) {
-                    locals.dragging = true;
-                    base.options.startDragging.apply(base, [base.$elem]);
-                }
+                if ( !base.options.isVertical ) {
 
-                if ((base.newRelativeX > 8 || base.newRelativeX < -8) && (base.browser.isTouch === true)) {
-                    if (ev.preventDefault !== undefined) {
-                        ev.preventDefault();
-                    } else {
-                        ev.returnValue = false;
+
+                    if (typeof base.options.startDragging === "function" && locals.dragging !== true && (base.newRelativeX !== 0)) {
+                        locals.dragging = true;
+                        base.options.startDragging.apply(base, [base.$elem]);
                     }
-                    locals.sliding = true;
+
+                    if ((base.newRelativeX > 8 || base.newRelativeX < -8) && (base.browser.isTouch === true)) {
+                        if (ev.preventDefault !== undefined) {
+                            ev.preventDefault();
+                        } else {
+                            ev.returnValue = false;
+                        }
+                        locals.sliding = true;
+                    }
+
+                    if ((base.newPosY > 10 || base.newPosY < -10) && locals.sliding === false) {
+                        $(document).off("touchmove.owl");
+                    }
+
+                    minSwipe = function () {
+                        return base.newRelativeX / 5;
+                    };
+
+                    maxSwipe = function () {
+                        return base.maximumPixels + base.newRelativeX / 5;
+                    };
+
+                    base.newPosX = Math.max(Math.min(base.newPosX, minSwipe()), maxSwipe());
+                    if (base.browser.support3d === true) {
+                        base.transition3d(base.newPosX);
+                    } else {
+                        base.css2move(base.newPosX);
+                    }
+                }else{
+
+                    if (typeof base.options.startDragging === "function" && locals.dragging !== true && (base.newRelativeY !== 0)) {
+                        locals.dragging = true;
+                        base.options.startDragging.apply(base, [base.$elem]);
+                    }
+
+                    if ((base.newRelativeY > 8 || base.newRelativeY < -8) && (base.browser.isTouch === true)) {
+                        if (ev.preventDefault !== undefined) {
+                            ev.preventDefault();
+                        } else {
+                            ev.returnValue = false;
+                        }
+                        locals.sliding = true;
+                    }
+
+                    if ((base.newPosX > 10 || base.newPosX < -10) && locals.sliding === false) {
+                        $(document).off("touchmove.owl");
+                    }
+
+                    minSwipe = function () {
+                        return base.newRelativeY / 5;
+                    };
+
+                    maxSwipe = function () {
+                        return base.maximumPixels + base.newRelativeY / 5;
+                    };
+
+                    base.newPosY = Math.max(Math.min(base.newPosY, minSwipe()), maxSwipe());
+                    if (base.browser.support3d === true) {
+                        base.transition3d(base.newPosY);
+                    } else {
+                        base.css2move(base.newPosY);
+                    }
                 }
 
-                if ((base.newPosY > 10 || base.newPosY < -10) && locals.sliding === false) {
-                    $(document).off("touchmove.owl");
-                }
-
-                minSwipe = function () {
-                    return base.newRelativeX / 5;
-                };
-
-                maxSwipe = function () {
-                    return base.maximumPixels + base.newRelativeX / 5;
-                };
-
-                base.newPosX = Math.max(Math.min(base.newPosX, minSwipe()), maxSwipe());
-                if (base.browser.support3d === true) {
-                    base.transition3d(base.newPosX);
-                } else {
-                    base.css2move(base.newPosX);
-                }
             }
 
             function dragEnd(event) {
@@ -1011,13 +1112,18 @@ if (typeof Object.create !== "function") {
                     base.$owlWrapper.removeClass("grabbing");
                 }
 
-                if (base.newRelativeX < 0) {
+
+                if (base.newRelativeX < 0 && !base.options.isVertical ) {
                     base.dragDirection = base.owl.dragDirection = "left";
-                } else {
+                } else if (base.newRelativeX >= 0 && !base.options.isVertical ){
                     base.dragDirection = base.owl.dragDirection = "right";
+                }else if (base.newRelativeY < 0 && base.options.isVertical ){
+                    base.dragDirection = base.owl.dragDirection = "top";
+                }else{
+                    base.dragDirection = base.owl.dragDirection = "bottom";
                 }
 
-                if (base.newRelativeX !== 0) {
+                if ( (base.newRelativeX !== 0 && !base.options.isVertical) || (base.newRelativeY !== 0 && base.options.isVertical) ) {
                     newPosition = base.getNewPosition();
                     base.goTo(newPosition, false, "drag");
                     if (locals.targetElement === ev.target && base.browser.isTouch !== true) {
@@ -1034,6 +1140,7 @@ if (typeof Object.create !== "function") {
                 }
                 swapEvents("off");
             }
+
             base.$elem.on(base.ev_types.start, ".owl-wrapper", dragStart);
         },
 
@@ -1044,7 +1151,7 @@ if (typeof Object.create !== "function") {
             if (newPosition > base.maximumItem) {
                 base.currentItem = base.maximumItem;
                 newPosition  = base.maximumItem;
-            } else if (base.newPosX >= 0) {
+            } else if ((base.newPosX >= 0 && !base.options.isVertical) || (base.newPosY >= 0 && base.options.isVertical)) {
                 newPosition = 0;
                 base.currentItem = 0;
             }
@@ -1053,27 +1160,51 @@ if (typeof Object.create !== "function") {
         closestItem : function () {
             var base = this,
                 array = base.options.scrollPerPage === true ? base.pagesInArray : base.positionsInArray,
-                goal = base.newPosX,
+                goal,
                 closest = null;
 
-            $.each(array, function (i, v) {
-                if (goal - (base.itemWidth / 20) > array[i + 1] && goal - (base.itemWidth / 20) < v && base.moveDirection() === "left") {
-                    closest = v;
-                    if (base.options.scrollPerPage === true) {
-                        base.currentItem = $.inArray(closest, base.positionsInArray);
-                    } else {
-                        base.currentItem = i;
+            if (base.options.isVertical){
+                goal = base.newPosY;
+                $.each(array, function (i, v) {
+                    if (goal - (base.itemHeight / 20) > array[i + 1] && goal - (base.itemHeight / 20) < v && base.moveDirection() === "top") {
+                        closest = v;
+                        if (base.options.scrollPerPage === true) {
+                            base.currentItem = $.inArray(closest, base.positionsInArray);
+                        } else {
+                            base.currentItem = i;
+                        }
+                    } else if (goal + (base.itemHeight / 20) < v && goal + (base.itemHeight / 20) > (array[i + 1] || array[i] - base.itemHeight) && base.moveDirection() === "bottom") {
+                        if (base.options.scrollPerPage === true) {
+                            closest = array[i + 1] || array[array.length - 1];
+                            base.currentItem = $.inArray(closest, base.positionsInArray);
+                        } else {
+                            closest = array[i + 1];
+                            base.currentItem = i + 1;
+                        }
                     }
-                } else if (goal + (base.itemWidth / 20) < v && goal + (base.itemWidth / 20) > (array[i + 1] || array[i] - base.itemWidth) && base.moveDirection() === "right") {
-                    if (base.options.scrollPerPage === true) {
-                        closest = array[i + 1] || array[array.length - 1];
-                        base.currentItem = $.inArray(closest, base.positionsInArray);
-                    } else {
-                        closest = array[i + 1];
-                        base.currentItem = i + 1;
+                });
+            }else{
+                goal = base.newPosX;
+                $.each(array, function (i, v) {
+                    if (goal - (base.itemWidth / 20) > array[i + 1] && goal - (base.itemWidth / 20) < v && base.moveDirection() === "left") {
+                        closest = v;
+                        if (base.options.scrollPerPage === true) {
+                            base.currentItem = $.inArray(closest, base.positionsInArray);
+                        } else {
+                            base.currentItem = i;
+                        }
+                    } else if (goal + (base.itemWidth / 20) < v && goal + (base.itemWidth / 20) > (array[i + 1] || array[i] - base.itemWidth) && base.moveDirection() === "right") {
+                        if (base.options.scrollPerPage === true) {
+                            closest = array[i + 1] || array[array.length - 1];
+                            base.currentItem = $.inArray(closest, base.positionsInArray);
+                        } else {
+                            closest = array[i + 1];
+                            base.currentItem = i + 1;
+                        }
                     }
-                }
-            });
+                });
+            }
+
             return base.currentItem;
         },
 
@@ -1081,10 +1212,10 @@ if (typeof Object.create !== "function") {
             var base = this,
                 direction;
             if (base.newRelativeX < 0) {
-                direction = "right";
+                direction =  (this.options.isVertical) ? 'bottom' :"right";
                 base.playDirection = "next";
             } else {
-                direction = "left";
+                direction = (this.options.isVertical) ? 'top' :"left";
                 base.playDirection = "prev";
             }
             return direction;
@@ -1465,6 +1596,8 @@ if (typeof Object.create !== "function") {
         itemsMobile : [479, 1],
         singleItem : false,
         itemsScaleUp : false,
+
+        isVertical : false,
 
         slideSpeed : 200,
         paginationSpeed : 800,
